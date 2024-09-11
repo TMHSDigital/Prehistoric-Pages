@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prehistoric Immersion</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap');
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, html {
+            height: 100%;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            transition: background-color 5s ease;
+        }
+
+        #scene {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        #ui {
+            position: relative;
+            z-index: 2;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        h1 {
+            font-family: 'Permanent Marker', cursive;
+            font-size: 4em;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        #controls {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+
+        .control-btn {
+            padding: 10px 20px;
+            font-size: 1.2em;
+            color: #fff;
+            background-color: rgba(0,0,0,0.5);
+            border: 2px solid #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+
+        .control-btn:hover {
+            background-color: rgba(255,255,255,0.2);
+        }
+
+        #info-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        #close-info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+        }
+
+        #day-night-cycle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(to bottom, #87CEEB, #FDB813);
+            transition: all 5s ease;
+        }
+
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            font-size: 2em;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">Loading T-Rex...</div>
+    <canvas id="scene"></canvas>
+    <div id="ui">
+        <h1>Jurassic Explorer</h1>
+        <div id="controls">
+            <button class="control-btn" id="move-dino">Move Dino</button>
+            <button class="control-btn" id="change-era">Change Era</button>
+            <button class="control-btn" id="show-info">Dino Info</button>
+        </div>
+    </div>
+    <div id="info-panel">
+        <div id="close-info">X</div>
+        <h2>T-Rex Information</h2>
+        <p>Tyrannosaurus rex, or T-Rex, was one of the largest land carnivores of all time. It lived during the Late Cretaceous period, about 68 to 66 million years ago.</p>
+    </div>
+    <div id="day-night-cycle"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+    <script>
+        // Three.js scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('scene'), antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight.position.set(5, 5, 5);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+
+        // Ground
+        const groundGeometry = new THREE.PlaneGeometry(100, 100);
+        const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x1a472a });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // Trees
+        function createTree(x, z) {
+            const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.2, 2, 8);
+            const trunkMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+            trunk.position.set(x, 1, z);
+            trunk.castShadow = true;
+
+            const leavesGeometry = new THREE.ConeGeometry(1, 2, 8);
+            const leavesMaterial = new THREE.MeshLambertMaterial({ color: 0x228B22 });
+            const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+            leaves.position.set(x, 2.5, z);
+            leaves.castShadow = true;
+
+            scene.add(trunk);
+            scene.add(leaves);
+        }
+
+        for (let i = 0; i < 20; i++) {
+            createTree(Math.random() * 40 - 20, Math.random() * 40 - 20);
+        }
+
+        // T-Rex
+        let trex;
+        const loader = new THREE.ObjectLoader();
+        loader.load('https://threejs.org/examples/models/json/teapot-claraio.json', (object) => {
+            trex = object;
+            trex.scale.set(0.5, 0.5, 0.5);
+            trex.position.set(0, 0, 0);
+            trex.rotation.y = Math.PI;
+            trex.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            scene.add(trex);
+            document.getElementById('loading').style.display = 'none';
+        });
+
+        camera.position.set(0, 5, 10);
+        camera.lookAt(0, 0, 0);
+
+        // Animation
+        function animate() {
+            requestAnimationFrame(animate);
+            if (trex) {
+                trex.rotation.y += 0.005;
+            }
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Day-night cycle
+        let isDaytime = true;
+        const dayNightCycle = document.getElementById('day-night-cycle');
+        function toggleDayNight() {
+            isDaytime = !isDaytime;
+            if (isDaytime) {
+                document.body.style.backgroundColor = '#87CEEB';
+                dayNightCycle.style.background = 'linear-gradient(to bottom, #87CEEB, #FDB813)';
+                ambientLight.intensity = 0.5;
+                directionalLight.intensity = 0.5;
+            } else {
+                document.body.style.backgroundColor = '#191970';
+                dayNightCycle.style.background = 'linear-gradient(to bottom, #191970, #483D8B)';
+                ambientLight.intensity = 0.2;
+                directionalLight.intensity = 0.2;
+            }
+        }
+        setInterval(toggleDayNight, 30000);
+
+        // UI Interactions
+        document.getElementById('move-dino').addEventListener('click', () => {
+            if (trex) {
+                gsap.to(trex.position, {
+                    x: Math.random() * 10 - 5,
+                    z: Math.random() * 10 - 5,
+                    duration: 2,
+                    ease: "power2.inOut"
+                });
+            }
+        });
+
+        document.getElementById('change-era').addEventListener('click', () => {
+            ground.material.color.setHex(Math.random() * 0xffffff);
+        });
+
+        document.getElementById('show-info').addEventListener('click', () => {
+            document.getElementById('info-panel').style.display = 'block';
+        });
+
+        document.getElementById('close-info').addEventListener('click', () => {
+            document.getElementById('info-panel').style.display = 'none';
+        });
+
+        // Resize handler
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
